@@ -1,1 +1,511 @@
-<!doctype html><html lang=en><head><meta charset=UTF-8><meta name=viewport content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1,minimum-scale=1"><meta http-equiv=X-UA-Compatible content="ie=edge"><link rel="shortcut icon" href=/static/favicon.ico><title>Wh1sht&#39;s blog</title><link href=/static/css/app.735a96676d004a3ab4342a23d617337f.css rel=stylesheet></head><body><div id=app></div><script type=text/javascript src=/static/js/manifest.9c14e4c25ff8a4ffed18.js></script><script type=text/javascript src=/static/js/vendor.e12dc8c9af1f7aa12436.js></script><script type=text/javascript src=/static/js/app.0e5d9a3657c7938b569f.js></script></body></html>
+
+<!DOCTYPE html>
+<html lang="zh-Hans">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Wh1sht&#39;s blog">
+    <title>蓝鲸安全--隐写wrtie up - Wh1sht&#39;s blog</title>
+    <meta name="author" content="Crazy">
+    
+    
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Crazy","sameAs":[]},"articleBody":"\n\nReady Go\n\n\n隐写find图片下载下来有点点小大，用记事本打开可能会太可怕，既然是隐写就直接丢StegSolve进行查看发现有一个二维码\n把图片保存下来，利用QR_code工具扫描或者在线二维码扫描\n被我吃了由题目可知，说是被吃了，可能图片里存在什么文件。用记事本打开看见文本后面有个flag.txt试试是不是压缩包，修改后缀名为压缩包的文件名，然后解压得到flag\n合体鲸鱼题目说合体，然后就可以想到会有两张图片,JPG的图片文件头为FFD8 以FFD9结束用WinHex工具打开搜索FFD9在00019386处看见了文件的结束\n点击FFD8数据块按Alt+1(选取起始位置)文件最后Alt+2(结束位置)右击数据库去-&gt;编辑(Edit)-&gt;复制选块(Copy Block)-&gt;置入新文件(Into New File)-&gt;保存为后缀名为jpg格式，打开刚保存的文件打开即可看见flag\n亚种右击图片查看详细信息，get the flag\n\n下雨天一开始打开这图片看见flag一闪一闪的,然后我采取了肉眼法取得flag，哈哈哈哈\n这是什么提示为兔子脚下踩了什么，开始我还以为是不是要改图片大小，用WinHex工具然后发现并不是，看见文件最后有一串编码是Unicode编码转Ascii码—用工具解码\n\nIHDR\n不太清楚这图片下载下来发现是0字节，可能是个错误的文件\n###愤怒的小猪\n这图片好像在哪个平台做过，立马打开StegSolve工具，又看见了一个二维码唉，换一种工具吧，你觉得是啥呢，让你的手机来体验下吧\n错误压缩把图片用WinHex工具查看发现的确是png格式，但又发现了IHDR,所以用pngcheck工具查看下1pngcheck.exe -v sctf.png\n得到结果为可以看出在最后做了点手脚因为长度不一样：\n123456789101112131415161718192021222324252627282930313233File: sctf.png (1421461 bytes)  chunk IHDR at offset 0x0000c, length 13    1000 x 562 image, 32-bit RGB+alpha, non-interlaced  chunk sRGB at offset 0x00025, length 1    rendering intent = perceptual  chunk gAMA at offset 0x00032, length 4: 0.45455  chunk pHYs at offset 0x00042, length 9: 3780x3780 pixels/meter (96 dpi)  chunk IDAT at offset 0x00057, length 65445    zlib: deflated, 32K window, fast compression  chunk IDAT at offset 0x10008, length 65524  chunk IDAT at offset 0x20008, length 65524  chunk IDAT at offset 0x30008, length 65524  chunk IDAT at offset 0x40008, length 65524  chunk IDAT at offset 0x50008, length 65524  chunk IDAT at offset 0x60008, length 65524  chunk IDAT at offset 0x70008, length 65524  chunk IDAT at offset 0x80008, length 65524  chunk IDAT at offset 0x90008, length 65524  chunk IDAT at offset 0xa0008, length 65524  chunk IDAT at offset 0xb0008, length 65524  chunk IDAT at offset 0xc0008, length 65524  chunk IDAT at offset 0xd0008, length 65524  chunk IDAT at offset 0xe0008, length 65524  chunk IDAT at offset 0xf0008, length 65524  chunk IDAT at offset 0x100008, length 65524  chunk IDAT at offset 0x110008, length 65524  chunk IDAT at offset 0x120008, length 65524  chunk IDAT at offset 0x130008, length 65524  chunk IDAT at offset 0x140008, length 65524  chunk IDAT at offset 0x150008, length 45027  chunk IDAT at offset 0x15aff7, length 138  chunk IEND at offset 0x15b08d, length 0No errors detected in sctf.png (28 chunks, 36.8% compression).\n然后我们找到文件0x15aff7的位置 找到 49 44  41 54 这是IDAT的起始位置头标识一般不存储数据，一般都是78开始的，怎么选取呢？根据上面那个长度来计算\n右击-&gt;编辑-&gt;复制选块-&gt;16进制数值补充：PNG(便携式网络图形)它的存储特点是通过无损压缩的方式来进行存储，它会把图像源码使用Zlib的压缩编码后分IDAT块存储。这时我们要写个解压脚本来进行解码(脚本是我模仿大佬的)\n1234567891011#! /usr/bin/env pythonimport zlibimport binasciiIDAT =\"789C5D91011280400802BF04FFFF5C75294B5537738A21A27D1E49CFD17DB3937A92E7E603880A6D485100901FB0410153350DE83112EA2D51C54CE2E585B15A2FC78E8872F51C6FC1881882F93D372DEF78E665B0C36C529622A0A45588138833A170A2071DDCD18219DB8C0D465D8B6989719645ED9C11C36AE3ABDAEFCFC0ACF023E77C17C7897667\".decode('hex')#print IDATresult = binascii.hexlify(zlib.decompress(IDAT))#print resultbin=result.decode('hex')print binprint '\\r\\n'print len(bin)\n得到：\n\n这时我们想到的是有可能是每8个一组为ASCII码也可能为一张二维码—(向二维码进攻吧为啥呢 因为625，这就表名是一个正方形了，0代表的就是黑色1代表白色)\n12345678910111213141516#!/usr/bin/env pythonimport ImageMAX = 25 #625得来的哟pic = Image.new(\"RGB\",(MAX, MAX))str = \"1111111000100001101111111100000101110010110100000110111010100000000010111011011101001000000001011101101110101110110100101110110000010101011011010000011111111010101010101111111000000001011101110000000011010011000001010011101101111010101001000011100000000000101000000001001001101000100111001111011100111100001110111110001100101000110011100001010100011010001111010110000010100010110000011011101100100001110011100100001011111110100000000110101001000111101111111011100001101011011100000100001100110001111010111010001101001111100001011101011000111010011100101110100100111011011000110000010110001101000110001111111011010110111011011\"i=0for y in range (0,MAX):    for x in range (0,MAX):        if(str[i] == '1'):            pic.putpixel([x,y],(0, 0, 0))        else:            pic.putpixel([x,y],(255,255,255))        i = i+1 pic.show()pic.save(\"flag.png\")\n这图片比较模糊，当然你也可以做处理。我这里直接用QR_code工具扫描\n最低位的轻吻\n从题目可以看出图片是进行了LSB隐写，处理最低位。\n12345678910111213141516171819#引用某大佬代码from PIL import Imagedef foo():    im=Image.open('E://01.bmp')#文件的位置    im2=im.copy()    pix=im2.load()    width,height=im2.size    for x in range(0,width):        for y in range(0,height):            #LSB            if pix[x,y]&amp;0x1==0:                pix[x,y]=0 #黑            else:                pix[x,y]=255    im2.show()if __name__ == '__main__':    foo()\n舞会搭档\n用WinHex工具打开，发现有一些奇怪的字符，对于玩linux的同学来说好像并不陌生，由于我是一菜b,就知道这个信息。\n后续待更新……\n","dateCreated":"2018-04-24T20:47:57+08:00","dateModified":"2018-04-24T22:45:29+08:00","datePublished":"2018-04-24T20:47:57+08:00","description":"\n\nReady Go\n","headline":"蓝鲸安全--隐写wrtie up","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2018/04/24/蓝鲸-CTF/"},"publisher":{"@type":"Organization","name":"Crazy","sameAs":[]},"url":"http://yoursite.com/2018/04/24/蓝鲸-CTF/","keywords":"CTF,setga"}</script>
+    <meta name="description" content="Ready Go">
+<meta name="keywords" content="CTF,setga">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="蓝鲸安全--隐写wrtie up">
+<meta property="og:url" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/index.html">
+<meta property="og:site_name" content="Wh1sht&#39;s blog">
+<meta property="og:description" content="Ready Go">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/subject.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524485401601.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524485993876.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524486354402.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524486636274.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524487193921.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524487340936.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524487404979.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524488030480.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/02-1.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524488691087.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524488967383.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524489051672.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524489325079.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524489647614.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524489786814.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524489857687.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524490026501.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524490735550.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524499223059.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524499860436.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/flag.png">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524500841669.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524490873105.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/1524490918108.jpg">
+<meta property="og:updated_time" content="2018-04-24T14:45:29.039Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="蓝鲸安全--隐写wrtie up">
+<meta name="twitter:description" content="Ready Go">
+<meta name="twitter:image" content="http://yoursite.com/2018/04/24/蓝鲸-CTF/images/subject.jpg">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/font-awesome.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">Wh1sht&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Kategorien"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Kategorien</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archiv"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archiv</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                            title="Suche"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Suche</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="Über"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Über</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            蓝鲸安全--隐写wrtie up
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2018-04-24T20:47:57+08:00">
+	
+		    24 Apr 2018
+    	
+    </time>
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p><img src="./images/subject.jpg" alt="subject"></p>
+<blockquote>
+<p>Ready Go</p>
+</blockquote>
+<a id="more"></a>
+<h2 id="隐写"><a href="#隐写" class="headerlink" title="隐写"></a>隐写</h2><h3 id="find"><a href="#find" class="headerlink" title="find"></a>find</h3><p><img src="./images/1524485401601.jpg" alt="find"><br>图片下载下来有点点小大，用记事本打开可能会太可怕，既然是隐写就直接丢StegSolve进行查看发现有一个二维码<br><img src="./images/1524485993876.jpg" alt="stego_final.jpg"></p>
+<p>把图片保存下来，利用QR_code工具扫描或者<a href="https://online-barcode-reader.inliteresearch.com/" target="_blank" rel="noopener">在线二维码扫描</a><br><img src="./images/1524486354402.jpg" alt="enter description here"></p>
+<h3 id="被我吃了"><a href="#被我吃了" class="headerlink" title="被我吃了"></a>被我吃了</h3><p><img src="./images/1524486636274.jpg" alt="被我吃了"><br>由题目可知，说是被吃了，可能图片里存在什么文件。用记事本打开看见文本后面有个flag.txt<br><img src="./images/1524487193921.jpg" alt="whale1"><br>试试是不是压缩包，修改后缀名为压缩包的文件名，然后解压得到flag<br><img src="./images/1524487340936.jpg" alt="flag.txt"></p>
+<h3 id="合体鲸鱼"><a href="#合体鲸鱼" class="headerlink" title="合体鲸鱼"></a>合体鲸鱼</h3><p><img src="./images/1524487404979.jpg" alt="合体鲸鱼"><br>题目说合体，然后就可以想到会有两张图片,JPG的图片文件头为FFD8 以FFD9结束<br>用WinHex工具打开搜索FFD9在00019386处看见了文件的结束<br><img src="./images/1524488030480.jpg" alt=""></p>
+<p>点击FFD8数据块按Alt+1(选取起始位置)文件最后Alt+2(结束位置)右击数据库去-&gt;编辑(Edit)-&gt;复制选块(Copy Block)-&gt;置入新文件(Into New File)-&gt;保存为后缀名为jpg格式，打开刚保存的文件打开即可看见flag<br><img src="./images/02-1.jpg" alt="flag" title="02-1"></p>
+<h3 id="亚种"><a href="#亚种" class="headerlink" title="亚种"></a>亚种</h3><p><img src="./images/1524488691087.jpg" alt="亚种"><br>右击图片查看详细信息，get the flag</p>
+<p><img src="./images/1524488967383.jpg" alt="flag"></p>
+<h3 id="下雨天"><a href="#下雨天" class="headerlink" title="下雨天"></a>下雨天</h3><p><img src="./images/1524489051672.jpg" alt="下雨天"><br>一开始打开这图片看见flag一闪一闪的,然后我采取了肉眼法取得flag，哈哈哈哈</p>
+<h3 id="这是什么"><a href="#这是什么" class="headerlink" title="这是什么"></a>这是什么</h3><p><img src="./images/1524489325079.jpg" alt="这是什么"><br>提示为兔子脚下踩了什么，开始我还以为是不是要改图片大小，用WinHex工具然后发现并不是，看见文件最后有一串编码是Unicode编码转Ascii码—用工具解码</p>
+<p><img src="./images/1524489647614.jpg" alt="flag"></p>
+<h3 id="IHDR"><a href="#IHDR" class="headerlink" title="IHDR"></a>IHDR</h3><p><img src="./images/1524489786814.jpg" alt="IHDR"></p>
+<p>不太清楚这图片下载下来发现是0字节，可能是个错误的文件</p>
+<p>###愤怒的小猪</p>
+<p><img src="./images/1524489857687.jpg" alt="愤怒的小猪"><br>这图片好像在哪个平台做过，立马打开StegSolve工具，又看见了一个二维码<br><img src="./images/1524490026501.jpg" alt="ste"><br>唉，换一种工具吧，你觉得是啥呢，让你的手机来体验下吧</p>
+<h3 id="错误压缩"><a href="#错误压缩" class="headerlink" title="错误压缩"></a>错误压缩</h3><p><img src="./images/1524490735550.jpg" alt="错误压缩"><br>把图片用WinHex工具查看发现的确是png格式，但又发现了IHDR,所以用pngcheck工具查看下<br><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pngcheck.exe -v sctf.png</span><br></pre></td></tr></table></figure></p>
+<p>得到结果为可以看出在最后做了点手脚因为长度不一样：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">File: <span class="title">sctf.png</span> (1421461 <span class="title">bytes</span>)</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IHDR</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x0000c</span>, <span class="title">length</span> 13</span></span><br><span class="line"><span class="function">    1000 <span class="title">x</span> 562 <span class="title">image</span>, 32-<span class="title">bit</span> <span class="title">RGB</span>+<span class="title">alpha</span>, <span class="title">non</span>-<span class="title">interlaced</span></span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">sRGB</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x00025</span>, <span class="title">length</span> 1</span></span><br><span class="line"><span class="function">    <span class="title">rendering</span> <span class="title">intent</span> = <span class="title">perceptual</span></span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">gAMA</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x00032</span>, <span class="title">length</span> 4: 0.45455</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">pHYs</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x00042</span>, <span class="title">length</span> 9: 3780<span class="title">x3780</span> <span class="title">pixels</span>/<span class="title">meter</span> (96 <span class="title">dpi</span>)</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x00057</span>, <span class="title">length</span> 65445</span></span><br><span class="line"><span class="function">    <span class="title">zlib</span>: <span class="title">deflated</span>, 32<span class="title">K</span> <span class="title">window</span>, <span class="title">fast</span> <span class="title">compression</span></span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x10008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x20008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x30008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x40008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x50008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x60008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x70008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x80008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x90008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">xa0008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">xb0008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">xc0008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">xd0008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">xe0008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">xf0008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x100008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x110008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x120008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x130008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x140008</span>, <span class="title">length</span> 65524</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x150008</span>, <span class="title">length</span> 45027</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IDAT</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x15aff7</span>, <span class="title">length</span> 138</span></span><br><span class="line"><span class="function">  <span class="title">chunk</span> <span class="title">IEND</span> <span class="title">at</span> <span class="title">offset</span> 0<span class="title">x15b08d</span>, <span class="title">length</span> 0</span></span><br><span class="line"><span class="function"><span class="title">No</span> <span class="title">errors</span> <span class="title">detected</span> <span class="title">in</span> <span class="title">sctf.png</span> (28 <span class="title">chunks</span>, 36.8% <span class="title">compression</span>).</span></span><br></pre></td></tr></table></figure>
+<p>然后我们找到文件0x15aff7的位置 找到 49 44  41 54 这是IDAT的起始位置头标识一般不存储数据，一般都是78开始的，怎么选取呢？根据上面那个长度来计算</p>
+<p><img src="./images/1524499223059.jpg" alt="IDTA"><br>右击-&gt;编辑-&gt;复制选块-&gt;16进制数值<br>补充：<br>PNG(便携式网络图形)它的存储特点是通过无损压缩的方式来进行存储，它会把图像源码使用Zlib的压缩编码后分IDAT块存储。<br>这时我们要写个解压脚本来进行解码(脚本是我模仿大佬的)</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#! /usr/bin/env python</span></span><br><span class="line"><span class="keyword">import</span> zlib</span><br><span class="line"><span class="keyword">import</span> binascii</span><br><span class="line">IDAT =<span class="string">"789C5D91011280400802BF04FFFF5C75294B5537738A21A27D1E49CFD17DB3937A92E7E603880A6D485100901FB0410153350DE83112EA2D51C54CE2E585B15A2FC78E8872F51C6FC1881882F93D372DEF78E665B0C36C529622A0A45588138833A170A2071DDCD18219DB8C0D465D8B6989719645ED9C11C36AE3ABDAEFCFC0ACF023E77C17C7897667"</span>.decode(<span class="string">'hex'</span>)</span><br><span class="line"><span class="comment">#print IDAT</span></span><br><span class="line">result = binascii.hexlify(zlib.decompress(IDAT))</span><br><span class="line"><span class="comment">#print result</span></span><br><span class="line">bin=result.decode(<span class="string">'hex'</span>)</span><br><span class="line"><span class="keyword">print</span> bin</span><br><span class="line"><span class="keyword">print</span> <span class="string">'\r\n'</span></span><br><span class="line"><span class="keyword">print</span> len(bin)</span><br></pre></td></tr></table></figure>
+<p>得到：</p>
+<p><img src="./images/1524499860436.jpg" alt="0101"></p>
+<p>这时我们想到的是有可能是每8个一组为ASCII码也可能为一张二维码—(向二维码进攻吧为啥呢 因为625，这就表名是一个正方形了，0代表的就是黑色1代表白色)</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="keyword">import</span> Image</span><br><span class="line">MAX = <span class="number">25</span> <span class="comment">#625得来的哟</span></span><br><span class="line">pic = Image.new(<span class="string">"RGB"</span>,(MAX, MAX))</span><br><span class="line">str = <span class="string">"1111111000100001101111111100000101110010110100000110111010100000000010111011011101001000000001011101101110101110110100101110110000010101011011010000011111111010101010101111111000000001011101110000000011010011000001010011101101111010101001000011100000000000101000000001001001101000100111001111011100111100001110111110001100101000110011100001010100011010001111010110000010100010110000011011101100100001110011100100001011111110100000000110101001000111101111111011100001101011011100000100001100110001111010111010001101001111100001011101011000111010011100101110100100111011011000110000010110001101000110001111111011010110111011011"</span></span><br><span class="line">i=<span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> y <span class="keyword">in</span> range (<span class="number">0</span>,MAX):</span><br><span class="line">    <span class="keyword">for</span> x <span class="keyword">in</span> range (<span class="number">0</span>,MAX):</span><br><span class="line">        <span class="keyword">if</span>(str[i] == <span class="string">'1'</span>):</span><br><span class="line">            pic.putpixel([x,y],(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>))</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            pic.putpixel([x,y],(<span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span>))</span><br><span class="line">        i = i+<span class="number">1</span></span><br><span class="line"> </span><br><span class="line">pic.show()</span><br><span class="line">pic.save(<span class="string">"flag.png"</span>)</span><br></pre></td></tr></table></figure>
+<p><img src="./images/flag.png" alt="code" title="flag"><br>这图片比较模糊，当然你也可以做处理。我这里直接用QR_code工具扫描<br><img src="./images/1524500841669.jpg" alt="flag"></p>
+<h3 id="最低位的轻吻"><a href="#最低位的轻吻" class="headerlink" title="最低位的轻吻"></a>最低位的轻吻</h3><p><img src="./images/1524490873105.jpg" alt="最低位的轻吻"></p>
+<p>从题目可以看出图片是进行了LSB隐写，处理最低位。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#引用某大佬代码</span></span><br><span class="line"><span class="keyword">from</span> PIL <span class="keyword">import</span> Image</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">foo</span><span class="params">()</span>:</span></span><br><span class="line">    im=Image.open(<span class="string">'E://01.bmp'</span>)<span class="comment">#文件的位置</span></span><br><span class="line">    im2=im.copy()</span><br><span class="line">    pix=im2.load()</span><br><span class="line">    width,height=im2.size</span><br><span class="line">    <span class="keyword">for</span> x <span class="keyword">in</span> range(<span class="number">0</span>,width):</span><br><span class="line">        <span class="keyword">for</span> y <span class="keyword">in</span> range(<span class="number">0</span>,height):</span><br><span class="line">            <span class="comment">#LSB</span></span><br><span class="line">            <span class="keyword">if</span> pix[x,y]&amp;<span class="number">0x1</span>==<span class="number">0</span>:</span><br><span class="line">                pix[x,y]=<span class="number">0</span> <span class="comment">#黑</span></span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                pix[x,y]=<span class="number">255</span></span><br><span class="line">    im2.show()</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    foo()</span><br></pre></td></tr></table></figure>
+<h3 id="舞会搭档"><a href="#舞会搭档" class="headerlink" title="舞会搭档"></a>舞会搭档</h3><p><img src="./images/1524490918108.jpg" alt="舞会搭档"></p>
+<p>用WinHex工具打开，发现有一些奇怪的字符，对于玩linux的同学来说好像并不陌生，由于我是一菜b,就知道这个信息。</p>
+<h3 id="后续"><a href="#后续" class="headerlink" title="后续"></a>后续</h3><p>待更新……</p>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">GETAGGT IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/CTF-setga/">CTF,setga</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">FRÜHER</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/04/23/chaoxing-2/" data-tooltip="超星尔雅刷课神器1-2(挂后台)" aria-label="NÄCHSTER: 超星尔雅刷课神器1-2(挂后台)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NÄCHSTER</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Diesen Beitrag teilen">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="http://service.weibo.com/share/share.php?&amp;title=http://yoursite.com/2018/04/24/蓝鲸-CTF/" title="Compartir en Weibo">
+                    <i class="fa fa-weibo" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+                <li class="post-action">
+                    <a class="post-action-btn btn btn--default" href="#gitment">
+                         <i class="fa fa-comment-o"></i>
+                    </a>
+                </li>
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+                <div id="gitment"></div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2018 Crazy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">FRÜHER</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/04/23/chaoxing-2/" data-tooltip="超星尔雅刷课神器1-2(挂后台)" aria-label="NÄCHSTER: 超星尔雅刷课神器1-2(挂后台)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NÄCHSTER</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Diesen Beitrag teilen">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="http://service.weibo.com/share/share.php?&amp;title=http://yoursite.com/2018/04/24/蓝鲸-CTF/" title="Compartir en Weibo">
+                    <i class="fa fa-weibo" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+                <li class="post-action">
+                    <a class="post-action-btn btn btn--default" href="#gitment">
+                         <i class="fa fa-comment-o"></i>
+                    </a>
+                </li>
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-close"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="http://service.weibo.com/share/share.php?&amp;title=http://yoursite.com/2018/04/24/蓝鲸-CTF/">
+                    <i class="fa fa-weibo" aria-hidden="true"></i><span>Compartir en Weibo</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <h4 id="about-card-name">Crazy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script type="text/javascript">
+            (function() {
+                function render() {
+                    new Gitment({
+                        id: 'http://yoursite.com/2018/04/24/蓝鲸-CTF/',
+                        owner: 'Wh1sht',
+                        repo: 'Wh1sht.github.io',
+                        oauth: {
+                            client_id: '569a10e2fb350c2f197c',
+                            client_secret: '32dc9c2a842de7ebfc62c5f9a33a4c7e9b36d877',
+                        }
+                    }).render('gitment');
+                }
+                var gc = document.createElement('script');
+                gc.type = 'text/javascript';
+                gc.src = '//imsun.github.io/gitment/dist/gitment.browser.js';
+                gc.charset = 'UTF-8';
+                gc.onload = render;
+                gc.async = true;
+                document.querySelector('body').appendChild(gc);
+                var gcs = document.createElement('link');
+                gcs.href = '//imsun.github.io/gitment/style/default.css';
+                gcs.type = 'text/css';
+                gcs.rel = 'stylesheet';
+                gcs.media = 'screen,print';
+                document.querySelector('head').appendChild(gcs);
+            })();
+	    </script>
+    
+
+
+
+    </body>
+</html>
